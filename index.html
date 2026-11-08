@@ -57,7 +57,43 @@ main{background:var(--panel);border:1px solid var(--line);border-radius:12px;pad
 .shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .shot img{display:block;width:100%;height:auto}
 .note{margin:0;font-size:12.5px;color:var(--muted)}
-@media (max-width:860px){.app{grid-template-columns:1fr}nav{position:static;max-height:none}}
+.shot a{display:block;cursor:zoom-in}
+.t-short,.m-only,.zoom-hint{display:none}
+.pager{display:none}
+/* 휴대폰(860px 이하): 위에 붙는 가로 칩 메뉴, 짧은 머리말, 캡처 아래 이전·다음 */
+@media (max-width:860px){
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+  .band{font-size:11.5px;padding-block:6px}
+  .wrap{gap:10px;padding-block:12px 32px}
+  header h1{font-size:18px}
+  .t-full,header p{display:none}
+  .t-short{display:inline}
+  .app{grid-template-columns:1fr;gap:12px}
+  nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;max-height:none;overflow-x:auto;overflow-y:hidden;
+    display:flex;flex-wrap:nowrap;align-items:center;gap:6px;border:0;border-radius:0;background:var(--bg);
+    margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:8px max(16px,env(safe-area-inset-left,0px));
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;box-shadow:0 1px 0 var(--line)}
+  nav::-webkit-scrollbar{display:none}
+  nav h2{flex:none;margin:0 2px 0 8px;font-size:10.5px;letter-spacing:.04em;white-space:nowrap}
+  nav h2:first-child{margin:0 2px 0 0}
+  nav button{flex:none;width:auto;white-space:nowrap;border:1px solid var(--line);background:var(--panel);
+    border-radius:999px;padding:6px 14px;font-size:13px}
+  nav button[aria-current="true"]{border-color:var(--accent)}
+  main{padding:14px;gap:10px;scroll-margin-top:calc(env(safe-area-inset-top,0px) + 60px)}
+  .cap h3{font-size:16px}
+  .cap .step{display:none}
+  .cap .desc{font-size:13px}
+  .zoom-hint{display:block;margin:-4px 0 0;font-size:12px;color:var(--muted)}
+  .pager{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .pager button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:14px;
+    border-radius:10px;padding:10px 12px;cursor:pointer}
+  .pager .count{flex:none;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .pager button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .m-only{display:block}
+  .m-about{font-size:12.5px;color:var(--muted)}
+  .m-about summary{cursor:pointer}
+  .m-about p{margin:6px 0 0}
+}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
@@ -66,7 +102,7 @@ main{background:var(--panel);border:1px solid var(--line);border-radius:12px;pad
 <div class="wrap">
   <header>
     <div>
-      <h1>FairMate 해외 박람회 준비 대시보드 · 체험판</h1>
+      <h1><span class="t-full">FairMate 해외 박람회 준비 대시보드 · 체험판</span><span class="t-short">FairMate 체험판</span></h1>
       <p>팀 삼조상조 5명 · 2026.09.17~09.29 · 시연 시나리오: 찹쌀 고추장(HS 2103.90)으로 미국 Summer Fancy Food Show 참가 준비 · 왼쪽에서 화면을 고르세요</p>
     </div>
   </header>
@@ -74,6 +110,10 @@ main{background:var(--panel);border:1px solid var(--line);border-radius:12px;pad
     <nav id="nav" aria-label="화면 목록"></nav>
     <main id="view" aria-live="polite"></main>
   </div>
+  <details class="m-about m-only">
+    <summary>프로젝트 정보</summary>
+    <p>팀 삼조상조 5명 · 2026.09.17~09.29 · 시연 시나리오: 찹쌀 고추장(HS 2103.90)으로 미국 Summer Fancy Food Show 참가 준비</p>
+  </details>
 </div>
 
 <script>
@@ -105,22 +145,41 @@ S.forEach(([grp,id,title])=>{
   b.innerHTML=`<span>${title}</span>`;
   b.addEventListener('click',()=>{location.hash=id});nav.appendChild(b);
 });
+const mobile=window.matchMedia('(max-width:860px)');
+function idx(){return Math.max(0,S.findIndex(s=>s[1]===location.hash.slice(1)))}
 function go(id){location.hash=id;view.scrollIntoView({block:'start'})}
+function step(d){go(S[(idx()+d+S.length)%S.length][1])}
+function centerChip(){
+  if(!mobile.matches)return;
+  const c=nav.querySelector('button[aria-current="true"]'); if(!c)return;
+  nav.scrollTo({left:c.offsetLeft-(nav.clientWidth-c.offsetWidth)/2,behavior:'smooth'});
+}
 function show(){
-  let i=S.findIndex(s=>s[1]===location.hash.slice(1)); if(i<0)i=0;
+  const i=idx();
   const [grp,sid,title,desc]=S[i];
   nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',String(b.dataset.id===sid)));
   const prev=S[(i-1+S.length)%S.length][1], next=S[(i+1)%S.length][1];
   view.innerHTML=`<div class="cap"><h3>${grp} · ${title}</h3>
     <div class="step"><span class="count">${i+1} / ${S.length}</span><button type="button" data-go="${prev}">← 이전</button><button type="button" data-go="${next}">다음 →</button></div>
     <p class="desc">${desc}</p></div>
-    <div class="shot"><img src="img/${sid}.jpg" alt="${title} 화면" width="2160" height="${sid==='template'?1860:1350}"></div>
+    <div class="shot"><a href="img/${sid}.jpg" target="_blank" rel="noopener" aria-label="${title} 화면 원본 크기로 보기"><img src="img/${sid}.jpg" alt="${title} 화면" width="2160" height="${sid==='template'?1860:1350}"></a></div>
+    <p class="zoom-hint">화면을 누르면 원본 크기로 열려 확대해서 볼 수 있어요. 좌우로 밀면 다음 화면으로 넘어가요.</p>
+    <div class="pager"><button type="button" data-go="${prev}">← 이전</button><span class="count">${i+1} / ${S.length}</span><button type="button" data-go="${next}">다음 →</button></div>
     <p class="note">실제 서비스 화면을 시연용 가상 데이터로 캡처했습니다. 이메일은 example.com 주소이고, 연락처·회사는 지어낸 정보입니다.</p>`;
   view.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+  centerChip();
 }
+// 휴대폰: 화면 영역을 좌우로 밀면 이전·다음 화면
+let tx=0,ty=0,tracking=false;
+view.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;tracking=true;tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+view.addEventListener('touchend',e=>{
+  if(!tracking)return;tracking=false;
+  const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5)step(dx<0?1:-1);
+},{passive:true});
 document.addEventListener('keydown',e=>{
   if(e.target.closest('input,textarea'))return;
-  const i=Math.max(0,S.findIndex(s=>s[1]===location.hash.slice(1)));
+  const i=idx();
   if(e.key==='ArrowRight')location.hash=S[(i+1)%S.length][1];
   if(e.key==='ArrowLeft')location.hash=S[(i-1+S.length)%S.length][1];
 });
